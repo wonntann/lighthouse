@@ -5,3 +5,30 @@
  */
 
 'use strict';
+
+/* eslint-env mocha */
+
+const UsesRelPreload = require('../../audits/uses-rel-preload.js');
+const assert = require('assert');
+
+const mockArtifacts = (networkRecords, mockChain) => {
+  return {
+    devtoolsLogs: {
+      [UsesRelPreload.DEFAULT_PASS]: [],
+    },
+    requestNetworkRecords: () => {
+      return Promise.resolve(networkRecords);
+    },
+    requestCriticalRequestChains: function() {
+      return Promise.resolve(mockChain);
+    },
+  };
+};
+
+describe('Performance: uses-rel-preload audit', () => {
+  it('should compute the correct preload values from a trace', () => {
+    return UsesRelPreload.audit(mockArtifacts()).then(output => {
+      console.log(output);
+    });
+  });
+});

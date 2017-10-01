@@ -19,8 +19,7 @@ class UsesRelPreloadAudit extends Audit {
     return {
       category: 'Performance',
       name: 'uses-rel-preload',
-      description: 'Critical resources that are discovered late can be preloaded to fetch them' +
-        'earlier.',
+      description: 'Preload key requests',
       failureDescription: 'Scripts were discovered late but fetching them earlier may have ' +
         'improved how quickly the page was interactive',
       helpText: 'Consider using <link rel=preload> to prioritize fetching late-discovered ' +
@@ -79,8 +78,7 @@ class UsesRelPreloadAudit extends Audit {
         );
 
         if (
-          !networkRecord._isLinkPreload && networkRecord._resourceType &&
-          networkRecord._resourceType._name === 'script'
+          !networkRecord._isLinkPreload && networkRecord._resourceType && networkRecord.protocol !== 'data'
         ) {
           const wastedMs = (request.endTime - request.startTime) * 1000;
           totalWastedMs += wastedMs;
@@ -96,19 +94,6 @@ class UsesRelPreloadAudit extends Audit {
       ];
       const details = Audit.makeTableDetails(headings, results);
 
-      let debugString = null;
-      if (results.length > 0) {
-        if (results.length === 1) {
-          debugString = `${URL.getURLDisplayName(results[0].url)} was discovered late but ` +
-            `fetching it earlier may have improved how quickly the page was interactive ` +
-            Util.formatMilliseconds(totalWastedMs);
-        } else {
-          debugString = `${results.length} scripts were discovered late but fetching it ` +
-            `earlier may have improved how quickly the page was interactive ` +
-            Util.formatMilliseconds(totalWastedMs);
-        }
-      }
-
       return {
         score: UnusedBytes.scoreForWastedMs(totalWastedMs),
         rawValue: totalWastedMs,
@@ -117,7 +102,6 @@ class UsesRelPreloadAudit extends Audit {
           value: results,
         },
         details,
-        debugString,
       };
     });
   }
