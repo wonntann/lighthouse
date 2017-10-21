@@ -26,9 +26,97 @@ const mockArtifacts = (networkRecords, mockChain) => {
 };
 
 describe('Performance: uses-rel-preload audit', () => {
-  it('should compute the correct preload values from a trace', () => {
-    return UsesRelPreload.audit(mockArtifacts()).then(output => {
-      console.log(output);
+  it(`should suggest preload resource`, () => {
+    const networkRecords = [
+      {
+        requestId: '3',
+        _isLinkPreload: false,
+        url: 'http://www.example.com/script.js',
+      },
+    ];
+
+    const chains = {
+      '1': {
+        children: {
+          '2': {
+            children: {
+              '3': {
+                request: {
+                  startTime: 0,
+                  endTime: 10,
+                },
+              },
+            },
+          },
+        },
+      },
+    };
+
+    return UsesRelPreload.audit(mockArtifacts(networkRecords, chains)).then(output => {
+      assert.equal(output.rawValue, 10000);
+      assert.equal(output.details.items.length, 1);
+    });
+  });
+
+  it(`shouldn't suggest preload for already preloaded records`, () => {
+    const networkRecords = [
+      {
+        requestId: '3',
+        _isLinkPreload: true,
+      },
+    ];
+
+    const chains = {
+      '1': {
+        children: {
+          '2': {
+            children: {
+              '3': {
+                request: {
+                  startTime: 0,
+                  endTime: 10,
+                },
+              },
+            },
+          },
+        },
+      },
+    };
+
+    return UsesRelPreload.audit(mockArtifacts(networkRecords, chains)).then(output => {
+      assert.equal(output.rawValue, 0);
+      assert.equal(output.details.items.length, 0);
+    });
+  });
+
+  it(`shouldn't suggest preload for protocol data`, () => {
+    const networkRecords = [
+      {
+        requestId: '3',
+        protocol: 'data',
+      },
+    ];
+
+    const chains = {
+      '1': {
+        children: {
+          '2': {
+            children: {
+              '3': {
+                request: {
+                  startTime: 0,
+                  endTime: 10,
+                },
+              },
+            },
+          },
+        },
+      },
+    };
+
+    return UsesRelPreload.audit(mockArtifacts(networkRecords, chains)).then(output => {
+      assert.equal(output.rawValue, 0);
+      assert.equal(output.details.items.length, 0);
     });
   });
 });

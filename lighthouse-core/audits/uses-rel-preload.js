@@ -7,7 +7,6 @@
 'use strict';
 
 const Audit = require('./audit');
-const URL = require('../lib/url-shim');
 const Util = require('../report/v2/renderer/util');
 const UnusedBytes = require('./byte-efficiency/byte-efficiency-audit');
 
@@ -78,7 +77,7 @@ class UsesRelPreloadAudit extends Audit {
         );
 
         if (
-          !networkRecord._isLinkPreload && networkRecord._resourceType && networkRecord.protocol !== 'data'
+          !networkRecord._isLinkPreload && networkRecord.protocol !== 'data'
         ) {
           const wastedMs = (request.endTime - request.startTime) * 1000;
           totalWastedMs += wastedMs;
