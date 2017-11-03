@@ -67,6 +67,7 @@
     "lcov-result-merger": "^1.2.0",
     "mocha": "^3.2.0",
     "npm-run-posix-or-windows": "^2.0.2",
+    "sinon": "^2.3.5",
     "zone.js": "^0.7.3"
   },
   "dependencies": {

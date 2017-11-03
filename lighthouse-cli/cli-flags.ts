@@ -14,7 +14,8 @@ import {GetValidOutputOptions, OutputMode} from './printer';
 export interface Flags {
   port: number, chromeFlags: string, output: any, outputPath: string, saveArtifacts: boolean,
       saveAssets: boolean, view: boolean, maxWaitForLoad: number, logLevel: string,
-      hostname: string, blockedUrlPatterns: string[], enableErrorReporting: boolean
+      gatherMode: boolean, auditMode: boolean, hostname: string, blockedUrlPatterns: string[],
+      enableErrorReporting: boolean
 }
 
 export function getFlags(manualArgv?: string) {
@@ -52,9 +53,11 @@ export function getFlags(manualArgv?: string) {
 
       .group(
           [
-            'save-assets', 'save-artifacts', 'list-all-audits', 'list-trace-categories',
-            'additional-trace-categories', 'config-path', 'chrome-flags', 'perf', 'port',
-            'hostname', 'max-wait-for-load', 'enable-error-reporting'
+
+            'save-assets', 'save-artifacts', 'gather-mode', 'audit-mode', 'list-all-audits',
+            'list-trace-categories', 'additional-trace-categories', 'config-path', 'chrome-flags',
+            'perf', 'port', 'hostname', 'max-wait-for-load', 'enable-error-reporting'
+
           ],
           'Configuration:')
       .describe({
@@ -66,6 +69,9 @@ export function getFlags(manualArgv?: string) {
         'disable-device-emulation': 'Disable Nexus 5X emulation',
         'disable-cpu-throttling': 'Disable CPU throttling',
         'disable-network-throttling': 'Disable network throttling',
+        'gather-mode':
+            'Collect artifacts from a connected browser, save, & quit. However, if audit-mode is also enabled, then the run will complete after saving artifacts to disk.',
+        'audit-mode': 'Process saved artifacts from disk',
         'save-assets': 'Save the trace contents & screenshots to disk',
         'save-artifacts': 'Save all gathered artifacts to disk',
         'list-all-audits': 'Prints a list of all available audits and exits',
@@ -85,6 +91,8 @@ export function getFlags(manualArgv?: string) {
         'max-wait-for-load':
             'The timeout (in milliseconds) to wait before the page is considered done loading and the run should continue. WARNING: Very high values can lead to large traces and instability',
       })
+      // set aliases
+      .alias({'gather-mode': 'G', 'audit-mode': 'A'})
 
       .group(['output', 'output-path', 'view'], 'Output:')
       .describe({
@@ -99,9 +107,9 @@ Example: --output-path=./lighthouse-results.html`,
 
       // boolean values
       .boolean([
-        'disable-storage-reset', 'disable-device-emulation', 'disable-cpu-throttling',
-        'disable-network-throttling', 'save-assets', 'save-artifacts', 'list-all-audits',
-        'list-trace-categories', 'perf', 'view', 'verbose', 'quiet', 'help'
+        'gather-mode', 'audit-mode', 'disable-storage-reset', 'disable-device-emulation',
+        'disable-cpu-throttling', 'disable-network-throttling', 'save-assets', 'save-artifacts',
+        'list-all-audits', 'list-trace-categories', 'perf', 'view', 'verbose', 'quiet', 'help'
       ])
       .choices('output', GetValidOutputOptions())
       // force as an array

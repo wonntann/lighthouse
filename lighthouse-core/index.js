@@ -39,7 +39,7 @@ module.exports = function(url, flags = {}, configJSON) {
 
     // kick off a lighthouse run
     return Runner.run(connection, {url, flags, config})
-      .then(lighthouseResults => {
+      .then((lighthouseResults = {}) => {
         // Annotate with time to run lighthouse.
         const endTime = Date.now();
         lighthouseResults.timing = lighthouseResults.timing || {};

@@ -305,10 +305,10 @@ class Config {
     // Generate a limited config if specified
     if (configJSON.settings &&
         (Array.isArray(configJSON.settings.onlyCategories) ||
-        Array.isArray(configJSON.settings.onlyAudits) ||
+        Array.isArray(configJSON.settings.auditModes) ||
         Array.isArray(configJSON.settings.skipAudits))) {
       const categoryIds = configJSON.settings.onlyCategories;
-      const auditIds = configJSON.settings.onlyAudits;
+      const auditIds = configJSON.settings.auditModes;
       const skipAuditIds = configJSON.settings.skipAudits;
       configJSON = Config.generateNewFilteredConfig(configJSON, categoryIds, auditIds,
           skipAuditIds);
@@ -583,6 +583,10 @@ class Config {
     });
   }
 
+  removePasses() {
+    this._passes = undefined;
+  }
+
   /** @type {string} */
   get configDir() {
     return this._configDir;
@@ -596,11 +600,6 @@ class Config {
   /** @type {Array<!Audit>} */
   get audits() {
     return this._audits;
-  }
-
-  /** @type {Array<!AuditResult>} */
-  get auditResults() {
-    return this._auditResults;
   }
 
   /** @type {Array<!Artifacts>} */
