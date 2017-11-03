@@ -95,8 +95,6 @@ export function saveResults(results: Results, artifacts: Object, flags: Flags) {
   let promise = Promise.resolve(results);
   const cwd = process.cwd();
 
-  // If we ran in -G, then we have no report to save
-  if (flags.gatherMode || !flags.auditMode) return promise;
   // Use the output path as the prefix for all generated files.
   // If no output path is set, generate a file prefix using the URL and date.
   const configuredPath = !flags.outputPath || flags.outputPath === 'stdout' ?
@@ -144,7 +142,8 @@ export async function runLighthouse(
     url: string, flags: Flags, config: Object|null): Promise<{}|void> {
   let launchedChrome: LaunchedChrome|undefined;
 
-  const shouldGather = !flags.auditMode;
+  const shouldGather = flags.gatherMode || (flags.gatherMode == flags.auditMode);
+  const shouldSaveResults = flags.auditMode || (flags.gatherMode == flags.auditMode);
 
   try {
     if (shouldGather) {
@@ -155,7 +154,9 @@ export async function runLighthouse(
 
     const artifacts = results.artifacts;
     delete results.artifacts;
-    await saveResults(results, artifacts!, flags);
+    if (shouldSaveResults){
+      await saveResults(results, artifacts!, flags);
+    }
 
     return results;
   } catch (err) {
