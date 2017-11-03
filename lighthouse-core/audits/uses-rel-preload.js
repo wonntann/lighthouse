@@ -19,8 +19,6 @@ class UsesRelPreloadAudit extends Audit {
       category: 'Performance',
       name: 'uses-rel-preload',
       description: 'Preload key requests',
-      failureDescription: 'Scripts were discovered late but fetching them earlier may have ' +
-        'improved how quickly the page was interactive',
       helpText: 'Consider using <link rel=preload> to prioritize fetching late-discovered ' +
         'resources sooner [Learn more](https://developers.google.com/web/updates/2016/03/link-rel-preload).',
       requiredArtifacts: ['devtoolsLogs'],
