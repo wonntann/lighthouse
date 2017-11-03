@@ -93,7 +93,7 @@ describe('ReportGeneratorV2', () => {
     });
 
     it('should score the categories', () => {
-      const auditResults = {
+      const resultsByAuditId = {
         'my-audit': {rawValue: 'you passed'},
         'my-boolean-audit': {score: true, extendedInfo: {}},
         'my-scored-audit': {score: 100},
@@ -113,7 +113,7 @@ describe('ReportGeneratorV2', () => {
             ],
           },
         },
-      }, auditResults);
+      }, resultsByAuditId);
 
       assert.equal(result.categories.length, 2);
       assert.equal(result.categories[0].score, 0);
