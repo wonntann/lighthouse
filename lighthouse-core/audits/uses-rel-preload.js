@@ -67,7 +67,8 @@ class UsesRelPreloadAudit extends Audit {
     return Promise.all([
       artifacts.requestNetworkRecords(devtoolsLogs),
       artifacts.requestCriticalRequestChains(devtoolsLogs),
-    ]).then(([networkRecords, critChains]) => {
+      artifacts.requestMainResource(devtoolsLogs)
+    ]).then(([networkRecords, critChains, mainResource]) => {
       const results = [];
       let totalWastedMs = 0;
       // get all critical requests 2 levels deep
@@ -80,7 +81,8 @@ class UsesRelPreloadAudit extends Audit {
         if (
           !networkRecord._isLinkPreload && networkRecord.protocol !== 'data'
         ) {
-          const wastedMs = (request.endTime - request.startTime) * 1000;
+          // calculate time between mainresource.endTime and resource start time
+          const wastedMs = (request.startTime - mainResource.endTime) * 1000;
           totalWastedMs += wastedMs;
           results.push({
             url: request.url,

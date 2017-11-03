@@ -19,9 +19,14 @@ const mockArtifacts = (networkRecords, mockChain) => {
     requestNetworkRecords: () => {
       return Promise.resolve(networkRecords);
     },
-    requestCriticalRequestChains: function() {
+    requestCriticalRequestChains: () => {
       return Promise.resolve(mockChain);
     },
+    requestMainResource: () => {
+      return Promise.resolve({
+        endTime: 1,
+      });
+    }
   };
 };
 
@@ -42,8 +47,7 @@ describe('Performance: uses-rel-preload audit', () => {
             children: {
               '3': {
                 request: {
-                  startTime: 0,
-                  endTime: 10,
+                  startTime: 10,
                 },
               },
             },
@@ -53,7 +57,7 @@ describe('Performance: uses-rel-preload audit', () => {
     };
 
     return UsesRelPreload.audit(mockArtifacts(networkRecords, chains)).then(output => {
-      assert.equal(output.rawValue, 10000);
+      assert.equal(output.rawValue, 9000);
       assert.equal(output.details.items.length, 1);
     });
   });
@@ -73,8 +77,7 @@ describe('Performance: uses-rel-preload audit', () => {
             children: {
               '3': {
                 request: {
-                  startTime: 0,
-                  endTime: 10,
+                  startTime: 10,
                 },
               },
             },
