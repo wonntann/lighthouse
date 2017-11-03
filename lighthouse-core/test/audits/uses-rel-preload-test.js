@@ -107,8 +107,7 @@ describe('Performance: uses-rel-preload audit', () => {
             children: {
               '3': {
                 request: {
-                  startTime: 0,
-                  endTime: 10,
+                  startTime: 10,
                 },
               },
             },
