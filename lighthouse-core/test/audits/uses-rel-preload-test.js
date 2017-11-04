@@ -26,7 +26,7 @@ const mockArtifacts = (networkRecords, mockChain) => {
       return Promise.resolve({
         endTime: 1,
       });
-    }
+    },
   };
 };
 

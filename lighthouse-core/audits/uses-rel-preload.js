@@ -65,7 +65,7 @@ class UsesRelPreloadAudit extends Audit {
     return Promise.all([
       artifacts.requestNetworkRecords(devtoolsLogs),
       artifacts.requestCriticalRequestChains(devtoolsLogs),
-      artifacts.requestMainResource(devtoolsLogs)
+      artifacts.requestMainResource(devtoolsLogs),
     ]).then(([networkRecords, critChains, mainResource]) => {
       const results = [];
       let totalWastedMs = 0;
