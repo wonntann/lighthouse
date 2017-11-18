@@ -92,6 +92,9 @@ function handleError(err: LighthouseError) {
 }
 
 export function saveResults(results: Results, artifacts: Object, flags: Flags) {
+  const shouldSaveResults = flags.auditMode || (flags.gatherMode == flags.auditMode);
+  if (shouldSaveResults) return;
+
   let promise = Promise.resolve(results);
   const cwd = process.cwd();
 
@@ -142,10 +145,14 @@ export async function runLighthouse(
     url: string, flags: Flags, config: Object|null): Promise<{}|void> {
   let launchedChrome: LaunchedChrome|undefined;
 
-  const shouldGather = flags.gatherMode || (flags.gatherMode == flags.auditMode);
-  const shouldSaveResults = flags.auditMode || (flags.gatherMode == flags.auditMode);
+  async function potentiallyKillChrome(launchedChrome) {
+    if (typeof launchedChrome !== 'undefined') {
+      await launchedChrome!.kill();
+    }
+  }
 
   try {
+    const shouldGather = flags.gatherMode || (flags.gatherMode == flags.auditMode);
     if (shouldGather) {
       launchedChrome = await getDebuggableChrome(flags);
       flags.port = launchedChrome.port;
@@ -154,16 +161,10 @@ export async function runLighthouse(
 
     const artifacts = results.artifacts;
     delete results.artifacts;
-    if (shouldSaveResults){
-      await saveResults(results, artifacts!, flags);
-    }
-
+    await saveResults(results, artifacts!, flags);
+    await potentiallyKillChrome(launchedChrome);
     return results;
   } catch (err) {
-    return handleError(err);
-  } finally {
-    if (typeof launchedChrome !== 'undefined') {
-      await launchedChrome!.kill();
-    }
+    await potentiallyKillChrome(launchedChrome) return handleError(err);
   }
 }
