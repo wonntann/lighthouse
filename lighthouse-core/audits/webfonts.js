@@ -9,6 +9,7 @@ const Audit = require('./audit');
 const Util = require('../report/v2/renderer/util');
 const WebInspector = require('../lib/web-inspector');
 const UnusedBytes = require('./byte-efficiency/byte-efficiency-audit');
+const allowedFontFaceDisplays = ['optional', 'swap', 'fallback'];
 
 class WebFonts extends Audit {
   /**
@@ -37,18 +38,18 @@ class WebFonts extends Audit {
 
     // Filter font-faces that do not have a display tag with optional or swap
     const fontsWithoutProperDisplay = fontFaces.filter(fontFace =>
-      !fontFace.display || !['optional', 'swap'].includes(fontFace.display)
+      !fontFace.display || !allowedFontFaceDisplays.includes(fontFace.display)
     );
 
 
     return Promise.all([traceOfTabPromise, networkPromise]).then(([tabTrace, networkRecords]) => {
       let totalWasted = 0;
-      const fcpInMS = tabTrace.timestamps.firstContentfulPaint / 1000000;
+      const fcpInMS = tabTrace.timestamps.firstContentfulPaint / 1000;
       const results = networkRecords.filter(record => {
         const isFont = record._resourceType === WebInspector.resourceTypes.Font;
-        const isLoadedBeforeFCP = record._endTime < fcpInMS || true;
+        //const isLoadedBeforeFCP = record._endTime * 1000 < fcpInMS;
 
-        return isFont && isLoadedBeforeFCP;
+        return isFont;// && isLoadedBeforeFCP;
       })
         .filter(fontRecord => {
           // find the fontRecord of a font

@@ -18,36 +18,46 @@ function getAllLoadedFonts() {
     weight: fontFace.weight,
   });
 
-  if (document.fonts.status === 'loaded') {
-    return Promise.resolve(
-      Array.from(document.fonts).filter(fontFace => fontFace.status === 'loaded')
-        .map(getFont)
-    );
-  } else {
-    return document.fonts.ready.then(() => {
-      return Array.from(document.fonts).filter(fontFace => fontFace.status === 'loaded')
-        .map(getFont);
-    });
-  }
+  return document.fonts.ready.then(() => {
+    return Array.from(document.fonts).filter(fontFace => fontFace.status === 'loaded')
+      .map(getFont);
+  });
 }
+
 function getFontFaceFromStylesheets() {
+  function resolveUrl(url) {
+    const link = document.createElement('a');
+    link.href = url;
+
+    return link.href;
+  }
+
+  const fontUrlRegex = new RegExp('url\\((?:"|\')([^"]+)(?:"|\')\\)');
   const fontFaceRules = [];
+  // get all loaded stylesheets
   for (let sheet = 0; sheet < document.styleSheets.length; sheet++) {
-    for (var i = 0; document.styleSheets[sheet].cssRules && i < document.styleSheets[sheet].cssRules.length; i++) {
-      var rule = document.styleSheets[sheet].cssRules[i];
+    const stylesheet = document.styleSheets[sheet];
+    for (let i = 0; stylesheet.cssRules && i < stylesheet.cssRules.length; i++) {
+      var rule = stylesheet.cssRules[i];
 
       if (rule instanceof CSSFontFaceRule) {
-        const keys = Object.keys(rule.style);
-        const fontObject = keys.reduce((fontRules, propName) => {
-          if (!isNaN(propName)) {
-            const cssKey = rule.style[keys[propName]];
-            fontRules[cssKey.replace('font-', '')] = rule.style[cssKey];
+        const fontsObject = {
+          display: rule.style.fontDisplay || 'auto',
+          family: rule.style.fontFamily.replace(/"|'/g, ''),
+          stretch: rule.style.fontStretch || 'normal',
+          style: rule.style.fontStyle || 'normal',
+          weight: rule.style.fontWeight || 'normal',
+          src: [],
+        }
+
+        if (rule.style.src) {
+          const matches = rule.style.src.match(fontUrlRegex);
+          if (matches) {
+            fontsObject.src.push(resolveUrl(matches[1]));
           }
+        }
 
-          return fontRules;
-        }, {});
-
-        fontFaceRules.push(fontObject);
+        fontFaceRules.push(fontsObject);
       }
     }
   }
@@ -61,16 +71,6 @@ class Fonts extends Gatherer {
     super();
 
     this.stylesheetIds = [];
-  }
-
-  _onStyleSheetAdded({ header }) {
-    this.stylesheetIds.push(header.styleSheetId);
-    console.log('added', header.styleSheetId);
-  }
-
-  _onStyleSheetRemoved({ stylesheetId }) {
-    this.stylesheetIds.splice(this.stylesheetIds.indexOf(stylesheetId), 1);
-    console.log('removed', stylesheetId);
   }
 
   _findSameFontFamily(fontFace, fontFacesList) {
@@ -90,19 +90,7 @@ class Fonts extends Gatherer {
     ).then(([loadedFonts, fontFaces ]) => {
       return loadedFonts.map(fontFace => {
         const fontFaceItem = this._findSameFontFamily(fontFace, fontFaces);
-
-        // if font-face hase an url
-        if (fontFaceItem && fontFaceItem.src) {
-          fontFace.src = [];
-
-          // Fetch font urls and add them to the font-face
-          fontFaceItem.src.split(',').forEach(src => {
-            const matches = src.match(fontUrlRegex);
-            if (matches) {
-              fontFace.src.push(matches[1]);
-            }
-          });
-        }
+        fontFace.src = fontFaceItem.src || [];
 
         return fontFace;
       });
