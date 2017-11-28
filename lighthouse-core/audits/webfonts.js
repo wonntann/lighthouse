@@ -44,16 +44,18 @@ class WebFonts extends Audit {
 
     return Promise.all([traceOfTabPromise, networkPromise]).then(([tabTrace, networkRecords]) => {
       let totalWasted = 0;
-      const fcpInMS = tabTrace.timestamps.firstContentfulPaint / 1000;
+      // const fcpInMS = tabTrace.timestamps.firstContentfulPaint / 1000;
       const results = networkRecords.filter(record => {
         const isFont = record._resourceType === WebInspector.resourceTypes.Font;
-        //const isLoadedBeforeFCP = record._endTime * 1000 < fcpInMS;
+        // const isLoadedBeforeFCP = record._endTime * 1000 < fcpInMS;
 
         return isFont;// && isLoadedBeforeFCP;
       })
         .filter(fontRecord => {
           // find the fontRecord of a font
-          return !!fontsWithoutProperDisplay.find(fontFace => fontFace.src.find(src => fontRecord.url === src));
+          return !!fontsWithoutProperDisplay.find(fontFace => {
+            return fontFace.src.find(src => fontRecord.url === src);
+          });
         })
         // calculate wasted time
         .map(record => {
@@ -67,8 +69,8 @@ class WebFonts extends Audit {
         });
 
       const headings = [
-        { key: 'url', itemType: 'url', text: 'Font URL' },
-        { key: 'wastedTime', itemType: 'text', text: 'Time it took' },
+        {key: 'url', itemType: 'url', text: 'Font URL'},
+        {key: 'wastedTime', itemType: 'text', text: 'Time it took'},
       ];
       const details = Audit.makeTableDetails(headings, results);
 

@@ -6,7 +6,6 @@
 'use strict';
 
 const Gatherer = require('./gatherer');
-const fontUrlRegex = new RegExp('url\\((?:"|\')([^"]+)(?:"|\')\\)');
 
 /* eslint-disable */
 function getAllLoadedFonts() {
@@ -77,17 +76,17 @@ class Fonts extends Gatherer {
     return fontFacesList.find(fontItem => {
       return fontFace.family === fontItem.family &&
         fontFace.style === fontItem.style &&
-        fontFace.weight === fontItem.weight
+        fontFace.weight === fontItem.weight;
     });
   }
 
-  afterPass({ driver }) {
+  afterPass({driver}) {
     return Promise.all(
       [
         driver.evaluateAsync(`(${getAllLoadedFonts.toString()})()`),
         driver.evaluateAsync(`(${getFontFaceFromStylesheets.toString()})()`),
       ]
-    ).then(([loadedFonts, fontFaces ]) => {
+    ).then(([loadedFonts, fontFaces]) => {
       return loadedFonts.map(fontFace => {
         const fontFaceItem = this._findSameFontFamily(fontFace, fontFaces);
         fontFace.src = fontFaceItem.src || [];
