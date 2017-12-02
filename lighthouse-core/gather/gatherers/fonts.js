@@ -7,6 +7,7 @@
 
 const Gatherer = require('./gatherer');
 
+/* eslint-disable */
 function getAllLoadedFonts() {
   const getFont = fontFace => ({
     display: fontFace.display,
@@ -42,7 +43,7 @@ function getFontFaceFromStylesheets() {
             style: rule.style.fontStyle || 'normal',
             weight: rule.style.fontWeight || 'normal',
             src: [],
-          }
+          };
 
           if (rule.style.src) {
             const matches = rule.style.src.match(fontUrlRegex);
@@ -59,32 +60,41 @@ function getFontFaceFromStylesheets() {
     return fontFaceRules;
   }
 
+  function loadStylesheetWithCORS(oldNode) {
+    const newNode = oldNode.cloneNode(true);
+
+    return new Promise(resolve => {
+      newNode.addEventListener('load', function onload() {
+        newNode.removeEventListener('load', onload);
+        resolve(getFontFaceFromStylesheets());
+      });
+      newNode.crossOrigin = 'anonymous';
+      oldNode.parentNode.insertBefore(newNode, oldNode);
+      oldNode.remove();
+    });
+  }
+
   const fontUrlRegex = new RegExp('url\\((?:"|\')([^"]+)(?:"|\')\\)');
   const fontFacePromises = [];
   // get all loaded stylesheets
-  for(const stylesheet of document.styleSheets) {
+  for (const stylesheet of document.styleSheets) {
     // Cross-origin stylesheets don't expose cssRules by default. We reload them with CORS headers.
     try {
-      fontFacePromises.push(Promise.resolve(getFontFaceRules(stylesheet)));
+      if (stylesheet.cssRules === null && stylesheet.href && stylesheet.ownerNode &&
+        !stylesheet.ownerNode.crossOrigin) {
+        fontFacePromises.push(Promise.resolve(getFontFaceRules(stylesheet)));
+      } else {
+        fontFacePromises.push(loadStylesheetWithCORS(stylesheet.ownerNode));
+      }
     } catch (err) {
-      const oldNode = stylesheet.ownerNode;
-      const newNode = oldNode.cloneNode(true);
-
-      fontFacePromises.push(new Promise(resolve => {
-        newNode.addEventListener('load', function onload() {
-          newNode.removeEventListener('load', onload);
-          resolve(getFontFaceFromStylesheets());
-        });
-        newNode.crossOrigin = 'anonymous';
-        oldNode.parentNode.insertBefore(newNode, oldNode);
-        oldNode.remove();
-      }));
+      fontFacePromises.push(loadStylesheetWithCORS(stylesheet.ownerNode));
     }
   }
 
   return Promise.all(fontFacePromises)
     .then(fontFaces => [].concat(...fontFaces));
 }
+/* eslint-enable */
 
 class Fonts extends Gatherer {
   constructor() {
