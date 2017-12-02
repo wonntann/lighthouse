@@ -8,20 +8,20 @@
 const Audit = require('./audit');
 const Util = require('../report/v2/renderer/util');
 const WebInspector = require('../lib/web-inspector');
-const UnusedBytes = require('./byte-efficiency/byte-efficiency-audit');
-const allowedFontFaceDisplays = ['optional', 'swap', 'fallback'];
+const allowedFontFaceDisplays = ['block', 'fallback', 'optional', 'swap'];
 
-class WebFonts extends Audit {
+class FontDisplay extends Audit {
   /**
    * @return {!AuditMeta}
    */
   static get meta() {
     return {
-      name: 'webfonts',
-      description: 'uses font-display',
-      failureDescription: 'Your fonts are blocking FCP!',
-      helpText: 'You should use font-display!!!!',
-      requiredArtifacts: ['traces', 'Fonts'],
+      name: 'font-display',
+      description: 'All text remains visible during webfont loads',
+      failureDescription: 'Avoid invisible text while webfonts are loading',
+      helpText: 'Leverage the font-display CSS feature to ensure text is user-visible while ' +
+        'webfonts are loading and avoid a FOIT.',
+      requiredArtifacts: ['devtoolsLogs', 'Fonts'],
     };
   }
 
@@ -30,26 +30,19 @@ class WebFonts extends Audit {
    * @return {!AuditResult}
    */
   static audit(artifacts) {
-    const trace = artifacts.traces[this.DEFAULT_PASS];
     const devtoolsLogs = artifacts.devtoolsLogs[this.DEFAULT_PASS];
     const fontFaces = artifacts.Fonts;
-    const traceOfTabPromise = artifacts.requestTraceOfTab(trace);
-    const networkPromise = artifacts.requestNetworkRecords(devtoolsLogs);
 
     // Filter font-faces that do not have a display tag with optional or swap
     const fontsWithoutProperDisplay = fontFaces.filter(fontFace =>
       !fontFace.display || !allowedFontFaceDisplays.includes(fontFace.display)
     );
 
-
-    return Promise.all([traceOfTabPromise, networkPromise]).then(([tabTrace, networkRecords]) => {
-      let totalWasted = 0;
-      // const fcpInMS = tabTrace.timestamps.firstContentfulPaint / 1000;
+    return artifacts.requestNetworkRecords(devtoolsLogs).then((networkRecords) => {
       const results = networkRecords.filter(record => {
         const isFont = record._resourceType === WebInspector.resourceTypes.Font;
-        // const isLoadedBeforeFCP = record._endTime * 1000 < fcpInMS;
 
-        return isFont;// && isLoadedBeforeFCP;
+        return isFont;
       })
         .filter(fontRecord => {
           // find the fontRecord of a font
@@ -59,8 +52,9 @@ class WebFonts extends Audit {
         })
         // calculate wasted time
         .map(record => {
-          const wastedTime = (record._endTime * 1000 - tabTrace.timestamps.navigationStart / 1000);
-          totalWasted += wastedTime;
+          // In reality the end time should be calculated with paint time included
+          // all browsers wait 3000ms to block text so we make sure 3000 is our max wasted time
+          const wastedTime = Math.min((record._endTime - record._startTime) * 1000, 3000);
 
           return {
             url: record.url,
@@ -70,23 +64,17 @@ class WebFonts extends Audit {
 
       const headings = [
         {key: 'url', itemType: 'url', text: 'Font URL'},
-        {key: 'wastedTime', itemType: 'text', text: 'Time it took'},
+        {key: 'wastedTime', itemType: 'text', text: 'Font download time'},
       ];
       const details = Audit.makeTableDetails(headings, results);
 
       return {
-        score: UnusedBytes.scoreForWastedMs(totalWasted),
-        rawValue: totalWasted,
-        displayValue: Util.formatMilliseconds(totalWasted, 1),
-        extendedInfo: {
-          value: {
-            wastedMs: totalWasted,
-          },
-        },
+        score: results.length === 0,
+        rawValue: results.length === 0,
         details,
       };
     });
   }
 }
 
-module.exports = WebFonts;
+module.exports = FontDisplay;

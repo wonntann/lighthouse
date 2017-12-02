@@ -7,7 +7,6 @@
 
 const Gatherer = require('./gatherer');
 
-/* eslint-disable */
 function getAllLoadedFonts() {
   const getFont = fontFace => ({
     display: fontFace.display,
@@ -31,39 +30,61 @@ function getFontFaceFromStylesheets() {
     return link.href;
   }
 
-  const fontUrlRegex = new RegExp('url\\((?:"|\')([^"]+)(?:"|\')\\)');
-  const fontFaceRules = [];
-  // get all loaded stylesheets
-  for (let sheet = 0; sheet < document.styleSheets.length; sheet++) {
-    const stylesheet = document.styleSheets[sheet];
-    for (let i = 0; stylesheet.cssRules && i < stylesheet.cssRules.length; i++) {
-      var rule = stylesheet.cssRules[i];
-
-      if (rule instanceof CSSFontFaceRule) {
-        const fontsObject = {
-          display: rule.style.fontDisplay || 'auto',
-          family: rule.style.fontFamily.replace(/"|'/g, ''),
-          stretch: rule.style.fontStretch || 'normal',
-          style: rule.style.fontStyle || 'normal',
-          weight: rule.style.fontWeight || 'normal',
-          src: [],
-        }
-
-        if (rule.style.src) {
-          const matches = rule.style.src.match(fontUrlRegex);
-          if (matches) {
-            fontsObject.src.push(resolveUrl(matches[1]));
+  function getFontFaceRules(stylesheet) {
+    const fontFaceRules = [];
+    if (stylesheet.cssRules) {
+      for (const rule of stylesheet.cssRules) {
+        if (rule instanceof CSSFontFaceRule) {
+          const fontsObject = {
+            display: rule.style.fontDisplay || 'auto',
+            family: rule.style.fontFamily.replace(/"|'/g, ''),
+            stretch: rule.style.fontStretch || 'normal',
+            style: rule.style.fontStyle || 'normal',
+            weight: rule.style.fontWeight || 'normal',
+            src: [],
           }
-        }
 
-        fontFaceRules.push(fontsObject);
+          if (rule.style.src) {
+            const matches = rule.style.src.match(fontUrlRegex);
+            if (matches) {
+              fontsObject.src.push(resolveUrl(matches[1]));
+            }
+          }
+
+          fontFaceRules.push(fontsObject);
+        }
       }
+    }
+
+    return fontFaceRules;
+  }
+
+  const fontUrlRegex = new RegExp('url\\((?:"|\')([^"]+)(?:"|\')\\)');
+  const fontFacePromises = [];
+  // get all loaded stylesheets
+  for(const stylesheet of document.styleSheets) {
+    // Cross-origin stylesheets don't expose cssRules by default. We reload them with CORS headers.
+    try {
+      fontFacePromises.push(Promise.resolve(getFontFaceRules(stylesheet)));
+    } catch (err) {
+      const oldNode = stylesheet.ownerNode;
+      const newNode = oldNode.cloneNode(true);
+
+      fontFacePromises.push(new Promise(resolve => {
+        newNode.addEventListener('load', function onload() {
+          newNode.removeEventListener('load', onload);
+          resolve(getFontFaceFromStylesheets());
+        });
+        newNode.crossOrigin = 'anonymous';
+        oldNode.parentNode.insertBefore(newNode, oldNode);
+        oldNode.remove();
+      }));
     }
   }
 
-  return fontFaceRules;
+  return Promise.all(fontFacePromises)
+    .then(fontFaces => [].concat(...fontFaces));
 }
-/* eslint-enable */
 
 class Fonts extends Gatherer {
   constructor() {
