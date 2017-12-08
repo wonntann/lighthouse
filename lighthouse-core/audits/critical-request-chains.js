@@ -79,6 +79,42 @@ class CriticalRequestChains extends Audit {
   }
 
   /**
+   * @param {*} tree
+   */
+  static flattenRequests(tree) {
+    const flattendChains = {};
+    const chainMap = new Map();
+    CriticalRequestChains._traverse(tree, opts => {
+      let chain;
+      if (chainMap.has(opts.id)) {
+        chain = chainMap.get(opts.id);
+      } else {
+        chain = {};
+        flattendChains[opts.id] = chain;
+      }
+
+      const request = opts.node.request;
+      chain.request = {
+        url: request._url,
+        startTime: request.startTime,
+        endTime: request.endTime,
+        responseReceivedTime: request.responseReceivedTime,
+        transferSize: request.transferSize,
+      };
+      chain.children = {};
+      Object.keys(opts.node.children).forEach(chainId => {
+        const childChain = {};
+        chainMap.set(chainId, childChain);
+        chain.children[chainId] = childChain;
+      });
+
+      chainMap.set(opts.id, chain);
+    });
+
+    return flattendChains;
+  }
+
+  /**
    * Audits the page to give a score for First Meaningful Paint.
    * @param {!Artifacts} artifacts The artifacts from the gather phase.
    * @return {!AuditResult} The score from the audit, ranging from 0-100.
@@ -101,29 +137,31 @@ class CriticalRequestChains extends Audit {
           walk(child.children, depth + 1);
         }, '');
       }
+      // Convert
+      const flattenedChains = CriticalRequestChains.flattenRequests(chains);
 
       // Account for initial navigation
-      const initialNavKey = Object.keys(chains)[0];
-      const initialNavChildren = initialNavKey && chains[initialNavKey].children;
+      const initialNavKey = Object.keys(flattenedChains)[0];
+      const initialNavChildren = initialNavKey && flattenedChains[initialNavKey].children;
       if (initialNavChildren && Object.keys(initialNavChildren).length > 0) {
         walk(initialNavChildren, 0);
       }
 
-      const longestChain = CriticalRequestChains._getLongestChain(chains);
+      const longestChain = CriticalRequestChains._getLongestChain(flattenedChains);
 
       return {
         rawValue: chainCount === 0,
         displayValue: Util.formatNumber(chainCount),
         extendedInfo: {
           value: {
-            chains,
+            chains: flattenedChains,
             longestChain,
           },
         },
         details: {
           type: 'criticalrequestchain',
           header: {type: 'text', text: 'View critical network waterfall:'},
-          chains,
+          chains: flattenedChains,
           longestChain,
         },
       };

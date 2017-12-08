@@ -16,15 +16,13 @@ const mockArtifacts = (networkRecords, mockChain) => {
     devtoolsLogs: {
       [UsesRelPreload.DEFAULT_PASS]: [],
     },
-    requestNetworkRecords: () => {
-      return Promise.resolve(networkRecords);
-    },
     requestCriticalRequestChains: () => {
       return Promise.resolve(mockChain);
     },
+    requestNetworkRecords: () => networkRecords,
     requestMainResource: () => {
       return Promise.resolve({
-        endTime: 1,
+        _endTime: 1,
       });
     },
   };
@@ -35,20 +33,18 @@ describe('Performance: uses-rel-preload audit', () => {
     const networkRecords = [
       {
         requestId: '3',
+        _startTime: 10,
         _isLinkPreload: false,
-        url: 'http://www.example.com/script.js',
+        _url: 'http://www.example.com/script.js',
       },
     ];
-
     const chains = {
       '1': {
         children: {
           '2': {
             children: {
               '3': {
-                request: {
-                  startTime: 10,
-                },
+                request: networkRecords[0],
               },
             },
           },
@@ -66,19 +62,18 @@ describe('Performance: uses-rel-preload audit', () => {
     const networkRecords = [
       {
         requestId: '3',
+        _startTime: 10,
         _isLinkPreload: true,
+        _url: 'http://www.example.com/script.js',
       },
     ];
-
     const chains = {
       '1': {
         children: {
           '2': {
             children: {
               '3': {
-                request: {
-                  startTime: 10,
-                },
+                request: networkRecords[0],
               },
             },
           },
@@ -97,6 +92,7 @@ describe('Performance: uses-rel-preload audit', () => {
       {
         requestId: '3',
         protocol: 'data',
+        _startTime: 10,
       },
     ];
 
@@ -106,9 +102,7 @@ describe('Performance: uses-rel-preload audit', () => {
           '2': {
             children: {
               '3': {
-                request: {
-                  startTime: 10,
-                },
+                request: networkRecords[0],
               },
             },
           },

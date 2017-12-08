@@ -59,13 +59,11 @@ class CriticalRequestChains extends ComputedArtifact {
       CriticalRequestChains.isCritical(request, mainResource));
 
     const flattenRequest = request => {
-      return {
-        url: request._url,
-        startTime: request.startTime,
-        endTime: request.endTime,
-        responseReceivedTime: request.responseReceivedTime,
-        transferSize: request.transferSize,
-      };
+      // add url to be backwards compatible with old CRC
+      // TODO remove in version 3.0
+      request.url = request._url;
+
+      return request;
     };
 
     // Create a tree of critical requests.

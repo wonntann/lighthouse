@@ -29,25 +29,18 @@ class UsesRelPreloadAudit extends Audit {
   static _flattenRequests(chains, maxLevel, minLevel = 0) {
     const requests = [];
     const flatten = (chains, level) => {
-      for (const chain in chains) {
+      Object.keys(chains).forEach(chain => {
         if (chains[chain]) {
           const currentChain = chains[chain];
           if (level >= minLevel) {
-            const request = Object.assign(
-              {},
-              currentChain.request,
-              {
-                id: chain,
-              }
-            );
-            requests.push(request);
+            requests.push(currentChain.request);
           }
 
           if (level < maxLevel) {
             flatten(currentChain.children, level + 1);
           }
         }
-      }
+      });
     };
 
     flatten(chains, 0);
@@ -63,27 +56,21 @@ class UsesRelPreloadAudit extends Audit {
     const devtoolsLogs = artifacts.devtoolsLogs[UsesRelPreloadAudit.DEFAULT_PASS];
 
     return Promise.all([
-      artifacts.requestNetworkRecords(devtoolsLogs),
       artifacts.requestCriticalRequestChains(devtoolsLogs),
       artifacts.requestMainResource(devtoolsLogs),
-    ]).then(([networkRecords, critChains, mainResource]) => {
+    ]).then(([critChains, mainResource]) => {
       const results = [];
       let totalWastedMs = 0;
       // get all critical requests 2 levels deep
       const criticalRequests = UsesRelPreloadAudit._flattenRequests(critChains, 2, 2);
       criticalRequests.forEach(request => {
-        const networkRecord = networkRecords.find(
-          networkRecord => networkRecord.requestId === request.id
-        );
-
-        if (
-          !networkRecord._isLinkPreload && networkRecord.protocol !== 'data'
-        ) {
+        const networkRecord = request;
+        if (!networkRecord._isLinkPreload && networkRecord.protocol !== 'data') {
           // calculate time between mainresource.endTime and resource start time
-          const wastedMs = (request.startTime - mainResource.endTime) * 1000;
+          const wastedMs = (request._startTime - mainResource._endTime) * 1000;
           totalWastedMs += wastedMs;
           results.push({
-            url: request.url,
+            url: request._url,
             downloadTime: Util.formatMilliseconds(wastedMs),
           });
         }
