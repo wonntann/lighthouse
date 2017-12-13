@@ -9,6 +9,7 @@ const Gatherer = require('./gatherer');
 
 /* eslint-disable */
 function getAllLoadedFonts() {
+  debugger;
   const getFont = fontFace => ({
     display: fontFace.display,
     family: fontFace.family,
@@ -24,6 +25,7 @@ function getAllLoadedFonts() {
 }
 
 function getFontFaceFromStylesheets() {
+  debugger;
   function resolveUrl(url) {
     const link = document.createElement('a');
     link.href = url;
@@ -82,9 +84,9 @@ function getFontFaceFromStylesheets() {
     try {
       if (stylesheet.cssRules === null && stylesheet.href && stylesheet.ownerNode &&
         !stylesheet.ownerNode.crossOrigin) {
-        fontFacePromises.push(Promise.resolve(getFontFaceRules(stylesheet)));
+          fontFacePromises.push(loadStylesheetWithCORS(stylesheet.ownerNode));
       } else {
-        fontFacePromises.push(loadStylesheetWithCORS(stylesheet.ownerNode));
+        fontFacePromises.push(Promise.resolve(getFontFaceRules(stylesheet)));
       }
     } catch (err) {
       fontFacePromises.push(loadStylesheetWithCORS(stylesheet.ownerNode));

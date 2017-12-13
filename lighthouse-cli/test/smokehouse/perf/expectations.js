@@ -38,4 +38,19 @@ module.exports = [
       },
     },
   },
+  {
+    initialUrl: 'http://localhost:10200/perf/fonts.html',
+    url: 'http://localhost:10200/perf/fonts.html',
+    audits: {
+      'font-display': {
+        score: false,
+        rawValue: false,
+        details: {
+          items: {
+            length: 1,
+          },
+        },
+      },
+    },
+  },
 ];
