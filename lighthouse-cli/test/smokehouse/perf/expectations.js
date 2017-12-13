@@ -38,4 +38,19 @@ module.exports = [
       },
     },
   },
+  {
+    initialUrl: 'https://jakearchibald.github.io/svgomg/',
+    url: 'https://jakearchibald.github.io/svgomg/',
+    audits: {
+      'uses-rel-preload': {
+        score: 0,
+        rawValue: '>1000',
+        details: {
+          items: {
+            length: 3,
+          },
+        },
+      },
+    },
+  },
 ];
