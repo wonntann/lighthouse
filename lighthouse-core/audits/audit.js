@@ -156,6 +156,7 @@ class Audit {
       scoringMode: audit.meta.scoringMode || Audit.SCORING_MODES.BINARY,
       informative: audit.meta.informative,
       manual: audit.meta.manual,
+      notApplicable: result.notApplicable,
       name: audit.meta.name,
       description: auditDescription,
       helpText: audit.meta.helpText,

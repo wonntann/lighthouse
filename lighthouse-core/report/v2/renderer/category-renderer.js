@@ -239,6 +239,19 @@ class CategoryRenderer {
   }
 
   /**
+   * @param {!Array<!Element>} elements
+   * @return {!Element}
+   */
+  _renderNotApplicableAuditsSection(elements) {
+    const notApplicableElem = this._renderAuditGroup({
+      title: `${elements.length} Not Applicable Audits`,
+    }, {expandable: true});
+    notApplicableElem.classList.add('lh-passed-audits');
+    elements.forEach(elem => notApplicableElem.appendChild(elem));
+    return notApplicableElem;
+  }
+
+  /**
    * @param {!Array<!ReportRenderer.AuditJSON>} manualAudits
    * @param {!Object<string, !ReportRenderer.GroupJSON>} groupDefinitions
    * @param {!Element} element Parent container to add the manual audits to.
@@ -443,13 +456,18 @@ class CategoryRenderer {
     element.appendChild(this._renderCategoryScore(category));
 
     const manualAudits = category.audits.filter(audit => audit.result.manual);
-    const nonManualAudits = category.audits.filter(audit => !manualAudits.includes(audit));
+    const nonManualAudits = category.audits.filter(audit => !manualAudits.includes(audit) && !audit.notApplicable);
     const auditsGroupedByGroup = /** @type {!Object<string,
         {passed: !Array<!ReportRenderer.AuditJSON>,
         failed: !Array<!ReportRenderer.AuditJSON>}>} */ ({});
     nonManualAudits.forEach(audit => {
       const groupId = audit.group;
-      const groups = auditsGroupedByGroup[groupId] || {passed: [], failed: []};
+      const groups = auditsGroupedByGroup[groupId] || {passed: [], failed: [], notApplicable: []};
+
+      if (audit.notApplicable) {
+        groups.notApplicable.push(audit);
+        return;
+      }
 
       if (audit.score === 100) {
         groups.passed.push(audit);
@@ -461,6 +479,7 @@ class CategoryRenderer {
     });
 
     const passedElements = /** @type {!Array<!Element>} */ ([]);
+    const notApplicableElements = /** @type {!Array<!Element>} */ ([]);
     Object.keys(auditsGroupedByGroup).forEach(groupId => {
       const group = groupDefinitions[groupId];
       const groups = auditsGroupedByGroup[groupId];
@@ -476,6 +495,12 @@ class CategoryRenderer {
         groups.passed.forEach(item => auditGroupElem.appendChild(this._renderAudit(item)));
         passedElements.push(auditGroupElem);
       }
+
+      if (groups.notApplicable.length) {
+        const auditGroupElem = this._renderAuditGroup(group, {expandable: true});
+        groups.notApplicable.forEach(item => auditGroupElem.appendChild(this._renderAudit(item)));
+        notApplicableElements.push(auditGroupElem);
+      }
     });
 
     // don't create a passed section if there are no passed
@@ -483,6 +508,12 @@ class CategoryRenderer {
 
     const passedElem = this._renderPassedAuditsSection(passedElements);
     element.appendChild(passedElem);
+
+    // don't create a not applicable section if there are no not applicables
+    if (!notApplicableElements.length) return element;
+
+    const notApplicableElem = this._renderNotApplicableAuditsSection(notApplicableElements);
+    element.appendChild(notApplicableElem);
 
     // Render manual audits after passing.
     this._renderManualAudits(manualAudits, groupDefinitions, element);

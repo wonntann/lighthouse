@@ -92,7 +92,10 @@ class ReportGeneratorV2 {
       const category = config.categories[categoryId];
       category.id = categoryId;
 
-      const audits = category.audits.map(audit => {
+      const audits = category.audits.filter(audit => {
+        const result = resultsByAuditId[audit.id];
+        return !result.notApplicable;
+      }).map(audit => {
         const result = resultsByAuditId[audit.id];
         // Cast to number to catch `null` and undefined when audits error
         let auditScore = Number(result.score) || 0;
