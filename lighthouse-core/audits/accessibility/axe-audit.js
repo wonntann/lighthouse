@@ -28,15 +28,6 @@ class AxeAudit extends Audit {
       return {
         rawValue: false,
         notApplicable: true,
-        extendedInfo: {},
-        details: {
-          type: 'list',
-          header: {
-            type: 'text',
-            text: 'View failing elements',
-          },
-          items: [],
-        },
       };
     }
 
