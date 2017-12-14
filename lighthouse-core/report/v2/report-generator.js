@@ -50,6 +50,7 @@ class ReportGeneratorV2 {
    * @return {number}
    */
   static arithmeticMean(items) {
+    // debugger;
     const results = items.reduce((result, item) => {
       const score = Number(item.score) || 0;
       const weight = Number(item.weight) || 0;
@@ -92,15 +93,21 @@ class ReportGeneratorV2 {
       const category = config.categories[categoryId];
       category.id = categoryId;
 
-      const audits = category.audits.filter(audit => {
-        const result = resultsByAuditId[audit.id];
-        return !result.notApplicable;
-      }).map(audit => {
+      const audits = category.audits.map(audit => {
         const result = resultsByAuditId[audit.id];
         // Cast to number to catch `null` and undefined when audits error
         let auditScore = Number(result.score) || 0;
         if (typeof result.score === 'boolean') {
           auditScore = result.score ? 100 : 0;
+        }
+        // If a result was not applicable, meaning its checks did not run against anything on
+        // the page, force it's weight to 0. It will not count during the arithmeticMean() but
+        // will still be included in the final report json and displayed in the report as
+        // "Not Applicable".
+        if (result.notApplicable) {
+          audit.weight = 0;
+          result.informative = true;
+          auditScore = 100;
         }
 
         return Object.assign({}, audit, {result, score: auditScore});
