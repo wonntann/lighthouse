@@ -9,7 +9,7 @@
  * Expected Lighthouse audit values for --perf tests
  */
 module.exports = [
-  {
+  /* {
     initialUrl: 'http://localhost:10200/online-only.html',
     url: 'http://localhost:10200/online-only.html',
     audits: {
@@ -37,7 +37,7 @@ module.exports = [
         rawValue: '<1000',
       },
     },
-  },
+  },*/
   {
     initialUrl: 'http://localhost:10200/perf/fonts.html',
     url: 'http://localhost:10200/perf/fonts.html',
