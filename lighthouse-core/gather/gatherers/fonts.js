@@ -118,12 +118,12 @@ class Fonts extends Gatherer {
         driver.evaluateAsync(`(${getFontFaceFromStylesheets.toString()})()`),
       ]
     ).then(([loadedFonts, fontFaces]) => {
-      return loadedFonts.map(fontFace => {
+      return [loadedFonts.map(fontFace => {
         const fontFaceItem = this._findSameFontFamily(fontFace, fontFaces);
         fontFace.src = fontFaceItem.src || [];
 
         return fontFace;
-      });
+      }), loadedFonts, fontFaces];
     });
   }
 }

@@ -31,7 +31,9 @@ class FontDisplay extends Audit {
    */
   static audit(artifacts) {
     const devtoolsLogs = artifacts.devtoolsLogs[this.DEFAULT_PASS];
-    const fontFaces = artifacts.Fonts;
+    const fontFaces = artifacts.Fonts && Array.isArray(artifacts.Fonts[0]) ?
+      artifacts.Fonts[0] :
+      artifacts.Fonts;
 
     // Filter font-faces that do not have a display tag with optional or swap
     const fontsWithoutProperDisplay = fontFaces.filter(fontFace =>
@@ -72,6 +74,11 @@ class FontDisplay extends Audit {
         score: results.length === 0,
         rawValue: results.length === 0,
         details,
+        extendedInfo: {
+          value: {
+            fonts: artifacts.Fonts,
+          },
+        },
       };
     });
   }

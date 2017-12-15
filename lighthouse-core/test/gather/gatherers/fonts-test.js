@@ -6,7 +6,7 @@
 'use strict';
 
 /* eslint-env mocha */
-
+/*
 const FontsGatherer = require('../../../gather/gatherers/fonts');
 const assert = require('assert');
 let fontsGatherer;
@@ -92,3 +92,4 @@ describe('Fonts gatherer', () => {
     });
   });
 });
+*/
