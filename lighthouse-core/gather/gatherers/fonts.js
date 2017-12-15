@@ -9,7 +9,6 @@ const Gatherer = require('./gatherer');
 
 /* eslint-disable */
 function getAllLoadedFonts() {
-  debugger;
   const getFont = fontFace => ({
     display: fontFace.display,
     family: fontFace.family,
@@ -25,7 +24,6 @@ function getAllLoadedFonts() {
 }
 
 function getFontFaceFromStylesheets() {
-  debugger;
   function resolveUrl(url) {
     const link = document.createElement('a');
     link.href = url;
