@@ -10,6 +10,8 @@ const NetworkManager = require('./web-inspector').NetworkManager;
 const EventEmitter = require('events').EventEmitter;
 const log = require('lighthouse-logger');
 
+const IGNORED_NETWORK_SCHEMES = ['data', 'ws'];
+
 class NetworkRecorder extends EventEmitter {
   /**
    * Creates an instance of NetworkRecorder.
@@ -24,10 +26,14 @@ class NetworkRecorder extends EventEmitter {
     this.startedRequestCount = 0;
     this.finishedRequestCount = 0;
 
-    this.networkManager.addEventListener(this.EventTypes.RequestStarted,
-        this.onRequestStarted.bind(this));
-    this.networkManager.addEventListener(this.EventTypes.RequestFinished,
-        this.onRequestFinished.bind(this));
+    this.networkManager.addEventListener(
+      this.EventTypes.RequestStarted,
+      this.onRequestStarted.bind(this)
+    );
+    this.networkManager.addEventListener(
+      this.EventTypes.RequestFinished,
+      this.onRequestFinished.bind(this)
+    );
   }
 
   get EventTypes() {
@@ -39,11 +45,82 @@ class NetworkRecorder extends EventEmitter {
   }
 
   isIdle() {
-    return this.activeRequestCount() === 0;
+    const quietPeriods = NetworkRecorder.findNetworkQuietPeriods(this._records, 0);
+    return quietPeriods.some(period => period.ongoing);
   }
 
   is2Idle() {
-    return this.activeRequestCount() <= 2;
+    const quietPeriods = NetworkRecorder.findNetworkQuietPeriods(this._records, 2);
+    return quietPeriods.some(period => period.ongoing);
+  }
+
+  _emitNetworkStatus() {
+    if (this.isIdle()) {
+      this.emit('networkidle');
+    } else {
+      this.emit('networkbusy');
+    }
+
+    if (this.is2Idle()) {
+      this.emit('network-2-idle');
+    } else {
+      this.emit('network-2-busy');
+    }
+  }
+
+  /**
+   * Finds all time periods where the number of inflight requests is less than or equal to the
+   * number of allowed concurrent requests.
+   * @param {!Array<!WebInspector.NetworkRequest>} networkRecords
+   * @param {number} allowedConcurrentRequests
+   * @param {number=} endTime
+   * @return {!Array<{start: number, end: number, ongoing: boolean|undefined}>}
+   */
+  static findNetworkQuietPeriods(networkRecords, allowedConcurrentRequests, endTime = Infinity) {
+    // First collect the timestamps of when requests start and end
+    let timeBoundaries = [];
+    networkRecords.forEach(record => {
+      const scheme = record.parsedURL && record.parsedURL.scheme;
+      if (IGNORED_NETWORK_SCHEMES.includes(scheme)) {
+        return;
+      }
+
+      // convert the network record timestamp to ms
+      timeBoundaries.push({time: record.startTime * 1000, isStart: true});
+      if (record.finished) {
+        timeBoundaries.push({time: record.endTime * 1000, isStart: false});
+      }
+    });
+
+    timeBoundaries = timeBoundaries
+      .filter(boundary => boundary.time <= endTime)
+      .sort((a, b) => a.time - b.time);
+
+    let numInflightRequests = 0;
+    let quietPeriodStart = 0;
+    const quietPeriods = [];
+    timeBoundaries.forEach(boundary => {
+      if (boundary.isStart) {
+        // we've just started a new request. are we exiting a quiet period?
+        if (numInflightRequests === allowedConcurrentRequests) {
+          quietPeriods.push({start: quietPeriodStart, end: boundary.time});
+        }
+        numInflightRequests++;
+      } else {
+        numInflightRequests--;
+        // we've just completed a request. are we entering a quiet period?
+        if (numInflightRequests === allowedConcurrentRequests) {
+          quietPeriodStart = boundary.time;
+        }
+      }
+    });
+
+    // Check we ended in a quiet period
+    if (numInflightRequests <= allowedConcurrentRequests) {
+      quietPeriods.push({start: quietPeriodStart, end: endTime, ongoing: true});
+    }
+
+    return quietPeriods;
   }
 
   /**
@@ -53,22 +130,17 @@ class NetworkRecorder extends EventEmitter {
    */
   onRequestStarted(request) {
     this.startedRequestCount++;
+    request.data._observedNodeStartTime = Date.now();
     this._records.push(request.data);
 
     const activeCount = this.activeRequestCount();
-    log.verbose('NetworkRecorder', `Request started. ${activeCount} requests in progress` +
-        ` (${this.startedRequestCount} started and ${this.finishedRequestCount} finished).`);
+    log.verbose(
+      'NetworkRecorder',
+      `Request started. ${activeCount} requests in progress` +
+        ` (${this.startedRequestCount} started and ${this.finishedRequestCount} finished).`
+    );
 
-    // If only one request in progress, emit event that we've transitioned from
-    // idle to busy.
-    if (activeCount === 1) {
-      this.emit('networkbusy');
-    }
-
-    // If exactly three requests in progress, we've transitioned from 2-idle to 2-busy.
-    if (activeCount === 3) {
-      this.emit('network-2-busy');
-    }
+    this._emitNetworkStatus();
   }
 
   /**
@@ -79,21 +151,17 @@ class NetworkRecorder extends EventEmitter {
    */
   onRequestFinished(request) {
     this.finishedRequestCount++;
+    request.data._observedNodeEndTime = Date.now();
     this.emit('requestloaded', request.data);
 
     const activeCount = this.activeRequestCount();
-    log.verbose('NetworkRecorder', `Request finished. ${activeCount} requests in progress` +
-        ` (${this.startedRequestCount} started and ${this.finishedRequestCount} finished).`);
+    log.verbose(
+      'NetworkRecorder',
+      `Request finished. ${activeCount} requests in progress` +
+        ` (${this.startedRequestCount} started and ${this.finishedRequestCount} finished).`
+    );
 
-    // If no requests in progress, emit event that we've transitioned from busy
-    // to idle.
-    if (this.isIdle()) {
-      this.emit('networkidle');
-    }
-
-    if (this.is2Idle()) {
-      this.emit('network-2-idle');
-    }
+    this._emitNetworkStatus();
   }
 
   // The below methods proxy network data into the DevTools SDK network layer.
@@ -102,10 +170,18 @@ class NetworkRecorder extends EventEmitter {
 
   onRequestWillBeSent(data) {
     // NOTE: data.timestamp -> time, data.type -> resourceType
-    this.networkManager._dispatcher.requestWillBeSent(data.requestId,
-        data.frameId, data.loaderId, data.documentURL, data.request,
-        data.timestamp, data.wallTime, data.initiator, data.redirectResponse,
-        data.type);
+    this.networkManager._dispatcher.requestWillBeSent(
+      data.requestId,
+      data.frameId,
+      data.loaderId,
+      data.documentURL,
+      data.request,
+      data.timestamp,
+      data.wallTime,
+      data.initiator,
+      data.redirectResponse,
+      data.type
+    );
   }
 
   onRequestServedFromCache(data) {
@@ -114,33 +190,54 @@ class NetworkRecorder extends EventEmitter {
 
   onResponseReceived(data) {
     // NOTE: data.timestamp -> time, data.type -> resourceType
-    this.networkManager._dispatcher.responseReceived(data.requestId,
-        data.frameId, data.loaderId, data.timestamp, data.type, data.response);
+    this.networkManager._dispatcher.responseReceived(
+      data.requestId,
+      data.frameId,
+      data.loaderId,
+      data.timestamp,
+      data.type,
+      data.response
+    );
   }
 
   onDataReceived(data) {
     // NOTE: data.timestamp -> time
-    this.networkManager._dispatcher.dataReceived(data.requestId, data.timestamp,
-        data.dataLength, data.encodedDataLength);
+    this.networkManager._dispatcher.dataReceived(
+      data.requestId,
+      data.timestamp,
+      data.dataLength,
+      data.encodedDataLength
+    );
   }
 
   onLoadingFinished(data) {
     // NOTE: data.timestamp -> finishTime
-    this.networkManager._dispatcher.loadingFinished(data.requestId,
-        data.timestamp, data.encodedDataLength);
+    this.networkManager._dispatcher.loadingFinished(
+      data.requestId,
+      data.timestamp,
+      data.encodedDataLength
+    );
   }
 
   onLoadingFailed(data) {
     // NOTE: data.timestamp -> time, data.type -> resourceType,
     // data.errorText -> localizedDescription
-    this.networkManager._dispatcher.loadingFailed(data.requestId,
-        data.timestamp, data.type, data.errorText, data.canceled,
-        data.blockedReason);
+    this.networkManager._dispatcher.loadingFailed(
+      data.requestId,
+      data.timestamp,
+      data.type,
+      data.errorText,
+      data.canceled,
+      data.blockedReason
+    );
   }
 
   onResourceChangedPriority(data) {
-    this.networkManager._dispatcher.resourceChangedPriority(data.requestId,
-        data.newPriority, data.timestamp);
+    this.networkManager._dispatcher.resourceChangedPriority(
+      data.requestId,
+      data.newPriority,
+      data.timestamp
+    );
   }
 
   /**
@@ -154,14 +251,22 @@ class NetworkRecorder extends EventEmitter {
     }
 
     switch (method) {
-      case 'Network.requestWillBeSent': return this.onRequestWillBeSent(params);
-      case 'Network.requestServedFromCache': return this.onRequestServedFromCache(params);
-      case 'Network.responseReceived': return this.onResponseReceived(params);
-      case 'Network.dataReceived': return this.onDataReceived(params);
-      case 'Network.loadingFinished': return this.onLoadingFinished(params);
-      case 'Network.loadingFailed': return this.onLoadingFailed(params);
-      case 'Network.resourceChangedPriority': return this.onResourceChangedPriority(params);
-      default: return;
+      case 'Network.requestWillBeSent':
+        return this.onRequestWillBeSent(params);
+      case 'Network.requestServedFromCache':
+        return this.onRequestServedFromCache(params);
+      case 'Network.responseReceived':
+        return this.onResponseReceived(params);
+      case 'Network.dataReceived':
+        return this.onDataReceived(params);
+      case 'Network.loadingFinished':
+        return this.onLoadingFinished(params);
+      case 'Network.loadingFailed':
+        return this.onLoadingFailed(params);
+      case 'Network.resourceChangedPriority':
+        return this.onResourceChangedPriority(params);
+      default:
+        return;
     }
   }
 

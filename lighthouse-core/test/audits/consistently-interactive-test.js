@@ -74,7 +74,7 @@ describe('Performance: consistently-interactive audit', () => {
 
       const result = ConsistentlyInteractive.findOverlappingQuietPeriods(cpu, network, traceOfTab);
       assert.deepEqual(result.cpuQuietPeriod, {start: 0, end: traceEnd / 1000});
-      assert.deepEqual(result.networkQuietPeriod, {start: 0, end: traceEnd / 1000});
+      assert.deepEqual(result.networkQuietPeriod, {start: 0, end: traceEnd / 1000, ongoing: true});
     });
 
     it('should throw when trace ended too soon after FMP', () => {
@@ -188,6 +188,7 @@ describe('Performance: consistently-interactive audit', () => {
       assert.deepEqual(result.networkQuietPeriod, {
         start: 32000 + navigationStart / 1000,
         end: traceEnd / 1000,
+        ongoing: true,
       });
       assert.equal(result.cpuQuietPeriods.length, 3);
       assert.equal(result.networkQuietPeriods.length, 2);

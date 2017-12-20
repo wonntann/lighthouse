@@ -26,6 +26,7 @@
     "smoke": "bash lighthouse-cli/test/smokehouse/run-all-tests.sh",
     "coverage": "istanbul cover -x \"**/third_party/**\" _mocha -- $(find */test -name '*-test.js') --timeout 10000 --reporter progress --report lcovonly",
     "coveralls": "yarn coverage && cat ./coverage/lcov.info | coveralls && ./node_modules/codecov/bin/codecov",
+    "debug": "node --inspect-brk ./lighthouse-cli/index.js",
     "start": "node ./lighthouse-cli/index.js",
     "test": "yarn lint --quiet && yarn unit && yarn type-check && yarn closure",
     "unit-core": "bash lighthouse-core/scripts/run-mocha.sh --core",

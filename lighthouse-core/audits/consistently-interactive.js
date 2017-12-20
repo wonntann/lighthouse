@@ -7,6 +7,7 @@
 
 const Audit = require('./audit');
 const Util = require('../report/v2/renderer/util.js');
+const NetworkRecorder = require('../lib/network-recorder');
 const TracingProcessor = require('../lib/traces/tracing-processor');
 
 // Parameters (in ms) for log-normal CDF scoring. To see the curve:
@@ -16,7 +17,6 @@ const SCORING_MEDIAN = 10000;
 
 const REQUIRED_QUIET_WINDOW = 5000;
 const ALLOWED_CONCURRENT_REQUESTS = 2;
-const IGNORED_NETWORK_SCHEMES = ['data', 'ws'];
 
 /**
  * @fileoverview This audit identifies the time the page is "consistently interactive".
@@ -49,49 +49,8 @@ class ConsistentlyInteractiveMetric extends Audit {
    */
   static _findNetworkQuietPeriods(networkRecords, traceOfTab) {
     const traceEndTsInMs = traceOfTab.timestamps.traceEnd / 1000;
-
-    // First collect the timestamps of when requests start and end
-    const timeBoundaries = [];
-    networkRecords.forEach(record => {
-      const scheme = record.parsedURL && record.parsedURL.scheme;
-      if (IGNORED_NETWORK_SCHEMES.includes(scheme)) {
-        return;
-      }
-
-      // convert the network record timestamp to ms to line-up with traceOfTab
-      timeBoundaries.push({time: record.startTime * 1000, isStart: true});
-      if (record.finished) {
-        timeBoundaries.push({time: record.endTime * 1000, isStart: false});
-      }
-    });
-
-    timeBoundaries.sort((a, b) => a.time - b.time);
-
-    let numInflightRequests = 0;
-    let quietPeriodStart = 0;
-    const quietPeriods = [];
-    timeBoundaries.forEach(boundary => {
-      if (boundary.isStart) {
-        // we've just started a new request. are we exiting a quiet period?
-        if (numInflightRequests === ALLOWED_CONCURRENT_REQUESTS) {
-          quietPeriods.push({start: quietPeriodStart, end: boundary.time});
-        }
-        numInflightRequests++;
-      } else {
-        numInflightRequests--;
-        // we've just completed a request. are we entering a quiet period?
-        if (numInflightRequests === ALLOWED_CONCURRENT_REQUESTS) {
-          quietPeriodStart = boundary.time;
-        }
-      }
-    });
-
-    // Check if the trace ended in a quiet period
-    if (numInflightRequests <= ALLOWED_CONCURRENT_REQUESTS) {
-      quietPeriods.push({start: quietPeriodStart, end: traceEndTsInMs});
-    }
-
-    return quietPeriods;
+    return NetworkRecorder.findNetworkQuietPeriods(networkRecords,
+      ALLOWED_CONCURRENT_REQUESTS, traceEndTsInMs);
   }
 
   /**
