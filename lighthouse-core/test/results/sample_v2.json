@@ -4964,6 +4964,8 @@
             "score": true,
             "displayValue": "",
             "rawValue": true,
+            "notApplicable": true,
+            "informative": true,
             "extendedInfo": {},
             "scoringMode": "binary",
             "name": "accesskeys",

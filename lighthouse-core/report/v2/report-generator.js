@@ -50,7 +50,6 @@ class ReportGeneratorV2 {
    * @return {number}
    */
   static arithmeticMean(items) {
-    // debugger;
     const results = items.reduce((result, item) => {
       const score = Number(item.score) || 0;
       const weight = Number(item.weight) || 0;
@@ -105,9 +104,9 @@ class ReportGeneratorV2 {
         // will still be included in the final report json and displayed in the report as
         // "Not Applicable".
         if (result.notApplicable) {
+          auditScore = 100;
           audit.weight = 0;
           result.informative = true;
-          auditScore = 100;
         }
 
         return Object.assign({}, audit, {result, score: auditScore});

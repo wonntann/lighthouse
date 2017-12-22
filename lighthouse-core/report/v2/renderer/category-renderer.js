@@ -237,7 +237,7 @@ class CategoryRenderer {
     elements.forEach(function(element) {
       scratch.appendChild(element);
     });
-    const subAudits = scratch.querySelectorAll('.lh-audit-group .lh-audit');
+    const subAudits = scratch.querySelectorAll('.lh-audit');
     if (subAudits.length) {
       return subAudits.length;
     } else {
@@ -266,7 +266,7 @@ class CategoryRenderer {
     const notApplicableElem = this._renderAuditGroup({
       title: `${this._getTotalAuditsLength(elements)} Not Applicable Audits`,
     }, {expandable: true});
-    notApplicableElem.classList.add('lh-passed-audits');
+    notApplicableElem.classList.add('lh-audit-group--notapplicable');
     elements.forEach(elem => notApplicableElem.appendChild(elem));
     return notApplicableElem;
   }
@@ -487,12 +487,10 @@ class CategoryRenderer {
 
       if (audit.result.notApplicable) {
         groups.notApplicable.push(audit);
+      } else if (audit.score === 100) {
+        groups.passed.push(audit);
       } else {
-        if (audit.score === 100) {
-          groups.passed.push(audit);
-        } else {
-          groups.failed.push(audit);
-        }
+        groups.failed.push(audit);
       }
 
       auditsGroupedByGroup[groupId] = groups;
@@ -523,17 +521,15 @@ class CategoryRenderer {
       }
     });
 
-    // don't create a passed section if there are no passed
-    if (!passedElements.length) return element;
+    if (passedElements.length) {
+      const passedElem = this._renderPassedAuditsSection(passedElements);
+      element.appendChild(passedElem);
+    }
 
-    const passedElem = this._renderPassedAuditsSection(passedElements);
-    element.appendChild(passedElem);
-
-    // don't create a not applicable section if there are no not applicables
-    if (!notApplicableElements.length) return element;
-
-    const notApplicableElem = this._renderNotApplicableAuditsSection(notApplicableElements);
-    element.appendChild(notApplicableElem);
+    if (notApplicableElements.length) {
+      const notApplicableElem = this._renderNotApplicableAuditsSection(notApplicableElements);
+      element.appendChild(notApplicableElem);
+    }
 
     // Render manual audits after passing.
     this._renderManualAudits(manualAudits, groupDefinitions, element);

@@ -126,6 +126,18 @@ describe('CategoryRenderer', () => {
     assert.ok(!categoryDOM2.querySelector('.lh-audit-group--manual'));
   });
 
+  it('renders not applicable audits if the category contains them', () => {
+    const a11yCategory = sampleResults.reportCategories.find(cat => cat.id === 'accessibility');
+    const categoryDOM = renderer.render(a11yCategory, sampleResults.reportGroups);
+    assert.ok(categoryDOM.querySelector('.lh-audit-group--notapplicable .lh-audit-group__summary'));
+    assert.equal(categoryDOM.querySelectorAll('.lh-score--informative').length, 1,
+        'score shows informative and dash icon');
+
+    const perfCategory = sampleResults.reportCategories.find(cat => cat.id === 'performance');
+    const categoryDOM2 = renderer.render(perfCategory, sampleResults.reportGroups);
+    assert.ok(!categoryDOM2.querySelector('.lh-audit-group--notapplicable'));
+  });
+
   describe('performance category', () => {
     const category = sampleResults.reportCategories.find(cat => cat.id === 'performance');
 
@@ -245,12 +257,13 @@ describe('CategoryRenderer', () => {
 
     it('renders the failed audits grouped by group', () => {
       const categoryDOM = renderer.render(category, sampleResults.reportGroups);
-
-      const failedAudits = category.audits.filter(audit => audit.score !== 100);
+      const failedAudits = category.audits.filter(audit => {
+        return audit.score !== 100 && !audit.result.notApplicable;
+      });
       const failedAuditTags = new Set(failedAudits.map(audit => audit.group));
 
-      const failedAuditGroups = categoryDOM.querySelectorAll('.lh-category > .lh-audit-group');
-      assert.equal(failedAuditGroups.length, failedAuditTags.size+1);
+      const failedAuditGroups = categoryDOM.querySelectorAll('.lh-category > div.lh-audit-group');
+      assert.equal(failedAuditGroups.length, failedAuditTags.size);
     });
 
     it('renders the passed audits grouped by group', () => {
