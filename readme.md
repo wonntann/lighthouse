@@ -3,6 +3,7 @@
 > Lighthouse analyzes web apps and web pages, collecting modern performance metrics and insights on developer best practices.
 
 ## Using Lighthouse in Chrome DevTools
+###Lighthouse changes
 
 Lighthouse is integrated directly into the Chrome Developer Tools, under the "Audits" panel.
 
