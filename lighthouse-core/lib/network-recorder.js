@@ -23,9 +23,6 @@ class NetworkRecorder extends EventEmitter {
     this._records = recordArray;
     this.networkManager = NetworkManager.createWithFakeTarget();
 
-    this.startedRequestCount = 0;
-    this.finishedRequestCount = 0;
-
     this.networkManager.addEventListener(
       this.EventTypes.RequestStarted,
       this.onRequestStarted.bind(this)
@@ -40,31 +37,35 @@ class NetworkRecorder extends EventEmitter {
     return NetworkManager.Events;
   }
 
-  activeRequestCount() {
-    return this.startedRequestCount - this.finishedRequestCount;
-  }
-
   isIdle() {
-    const quietPeriods = NetworkRecorder.findNetworkQuietPeriods(this._records, 0);
-    return quietPeriods.some(period => period.ongoing);
+    return !!this._getActiveIdlePeriod(0);
   }
 
   is2Idle() {
-    const quietPeriods = NetworkRecorder.findNetworkQuietPeriods(this._records, 2);
-    return quietPeriods.some(period => period.ongoing);
+    return !!this._getActiveIdlePeriod(2);
+  }
+
+  _getActiveIdlePeriod(allowedRequests) {
+    const quietPeriods = NetworkRecorder.findNetworkQuietPeriods(this._records, allowedRequests);
+    return quietPeriods.find(period => !Number.isFinite(period.end));
   }
 
   _emitNetworkStatus() {
-    if (this.isIdle()) {
-      this.emit('networkidle');
-    } else {
-      this.emit('networkbusy');
-    }
+    const zeroQuiet = this._getActiveIdlePeriod(0);
+    const twoQuiet = this._getActiveIdlePeriod(2);
 
-    if (this.is2Idle()) {
+    if (twoQuiet && zeroQuiet) {
+      log.verbose('NetworkRecorder', 'network fully-quiet');
       this.emit('network-2-idle');
+      this.emit('networkidle');
+    } else if (twoQuiet && !zeroQuiet) {
+      log.verbose('NetworkRecorder', 'network semi-quiet');
+      this.emit('network-2-idle');
+      this.emit('networkbusy');
     } else {
+      log.verbose('NetworkRecorder', 'network busy');
       this.emit('network-2-busy');
+      this.emit('networkbusy');
     }
   }
 
@@ -74,7 +75,7 @@ class NetworkRecorder extends EventEmitter {
    * @param {!Array<!WebInspector.NetworkRequest>} networkRecords
    * @param {number} allowedConcurrentRequests
    * @param {number=} endTime
-   * @return {!Array<{start: number, end: number, ongoing: boolean|undefined}>}
+   * @return {!Array<{start: number, end: number}>}
    */
   static findNetworkQuietPeriods(networkRecords, allowedConcurrentRequests, endTime = Infinity) {
     // First collect the timestamps of when requests start and end
@@ -117,7 +118,7 @@ class NetworkRecorder extends EventEmitter {
 
     // Check we ended in a quiet period
     if (numInflightRequests <= allowedConcurrentRequests) {
-      quietPeriods.push({start: quietPeriodStart, end: endTime, ongoing: true});
+      quietPeriods.push({start: quietPeriodStart, end: endTime});
     }
 
     return quietPeriods;
@@ -129,17 +130,7 @@ class NetworkRecorder extends EventEmitter {
    * @private
    */
   onRequestStarted(request) {
-    this.startedRequestCount++;
-    request.data._observedNodeStartTime = Date.now();
     this._records.push(request.data);
-
-    const activeCount = this.activeRequestCount();
-    log.verbose(
-      'NetworkRecorder',
-      `Request started. ${activeCount} requests in progress` +
-        ` (${this.startedRequestCount} started and ${this.finishedRequestCount} finished).`
-    );
-
     this._emitNetworkStatus();
   }
 
@@ -150,17 +141,7 @@ class NetworkRecorder extends EventEmitter {
    * @private
    */
   onRequestFinished(request) {
-    this.finishedRequestCount++;
-    request.data._observedNodeEndTime = Date.now();
     this.emit('requestloaded', request.data);
-
-    const activeCount = this.activeRequestCount();
-    log.verbose(
-      'NetworkRecorder',
-      `Request finished. ${activeCount} requests in progress` +
-        ` (${this.startedRequestCount} started and ${this.finishedRequestCount} finished).`
-    );
-
     this._emitNetworkStatus();
   }
 
