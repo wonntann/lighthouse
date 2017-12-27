@@ -151,18 +151,10 @@ class NetworkRecorder extends EventEmitter {
 
   onRequestWillBeSent(data) {
     // NOTE: data.timestamp -> time, data.type -> resourceType
-    this.networkManager._dispatcher.requestWillBeSent(
-      data.requestId,
-      data.frameId,
-      data.loaderId,
-      data.documentURL,
-      data.request,
-      data.timestamp,
-      data.wallTime,
-      data.initiator,
-      data.redirectResponse,
-      data.type
-    );
+    this.networkManager._dispatcher.requestWillBeSent(data.requestId,
+        data.frameId, data.loaderId, data.documentURL, data.request,
+        data.timestamp, data.wallTime, data.initiator, data.redirectResponse,
+        data.type);
   }
 
   onRequestServedFromCache(data) {
@@ -171,54 +163,33 @@ class NetworkRecorder extends EventEmitter {
 
   onResponseReceived(data) {
     // NOTE: data.timestamp -> time, data.type -> resourceType
-    this.networkManager._dispatcher.responseReceived(
-      data.requestId,
-      data.frameId,
-      data.loaderId,
-      data.timestamp,
-      data.type,
-      data.response
-    );
+    this.networkManager._dispatcher.responseReceived(data.requestId,
+        data.frameId, data.loaderId, data.timestamp, data.type, data.response);
   }
 
   onDataReceived(data) {
     // NOTE: data.timestamp -> time
-    this.networkManager._dispatcher.dataReceived(
-      data.requestId,
-      data.timestamp,
-      data.dataLength,
-      data.encodedDataLength
-    );
+    this.networkManager._dispatcher.dataReceived(data.requestId, data.timestamp,
+        data.dataLength, data.encodedDataLength);
   }
 
   onLoadingFinished(data) {
     // NOTE: data.timestamp -> finishTime
-    this.networkManager._dispatcher.loadingFinished(
-      data.requestId,
-      data.timestamp,
-      data.encodedDataLength
-    );
+    this.networkManager._dispatcher.loadingFinished(data.requestId,
+        data.timestamp, data.encodedDataLength);
   }
 
   onLoadingFailed(data) {
     // NOTE: data.timestamp -> time, data.type -> resourceType,
     // data.errorText -> localizedDescription
-    this.networkManager._dispatcher.loadingFailed(
-      data.requestId,
-      data.timestamp,
-      data.type,
-      data.errorText,
-      data.canceled,
-      data.blockedReason
-    );
+    this.networkManager._dispatcher.loadingFailed(data.requestId,
+        data.timestamp, data.type, data.errorText, data.canceled,
+        data.blockedReason);
   }
 
   onResourceChangedPriority(data) {
-    this.networkManager._dispatcher.resourceChangedPriority(
-      data.requestId,
-      data.newPriority,
-      data.timestamp
-    );
+    this.networkManager._dispatcher.resourceChangedPriority(data.requestId,
+        data.newPriority, data.timestamp);
   }
 
   /**
@@ -232,22 +203,14 @@ class NetworkRecorder extends EventEmitter {
     }
 
     switch (method) {
-      case 'Network.requestWillBeSent':
-        return this.onRequestWillBeSent(params);
-      case 'Network.requestServedFromCache':
-        return this.onRequestServedFromCache(params);
-      case 'Network.responseReceived':
-        return this.onResponseReceived(params);
-      case 'Network.dataReceived':
-        return this.onDataReceived(params);
-      case 'Network.loadingFinished':
-        return this.onLoadingFinished(params);
-      case 'Network.loadingFailed':
-        return this.onLoadingFailed(params);
-      case 'Network.resourceChangedPriority':
-        return this.onResourceChangedPriority(params);
-      default:
-        return;
+      case 'Network.requestWillBeSent': return this.onRequestWillBeSent(params);
+      case 'Network.requestServedFromCache': return this.onRequestServedFromCache(params);
+      case 'Network.responseReceived': return this.onResponseReceived(params);
+      case 'Network.dataReceived': return this.onDataReceived(params);
+      case 'Network.loadingFinished': return this.onLoadingFinished(params);
+      case 'Network.loadingFailed': return this.onLoadingFailed(params);
+      case 'Network.resourceChangedPriority': return this.onResourceChangedPriority(params);
+      default: return;
     }
   }
 
